@@ -34,7 +34,7 @@ export default function () {
       if (options.userId !== this.userId && !isAdmin) {
         const err = 'AUTH ERROR: Action not allowed';
         logger.error(err);
-        throw new Meteor.Error('action-not-allowed', err);
+        throw new Meteor.Error('auth-error', err);
       }
 
       const id = options.userId || this.userId;
@@ -79,7 +79,7 @@ export default function () {
       if (!Roles.userIsInRole(this.userId, 'admin')) {
         const err = 'AUTH ERROR: Invalid credentials';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('auth-error', err);
       }
 
       check(options, {
@@ -121,7 +121,7 @@ export default function () {
       if (!Roles.userIsInRole(this.userId, 'admin')) {
         const err = 'AUTH ERROR: Invalid credentials';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('auth-error', err);
       }
 
       check(options, {
@@ -148,10 +148,10 @@ export default function () {
     },
 
 
-    sendUserInvite(options) {
+    'users/sendInvite'(options) {
 
       const logger = Logger.child({
-        meteor_method: 'sendUserInvite',
+        meteor_method: 'users/sendInvite',
         meteor_method_args: [options],
         userId: this.userId
       });
@@ -159,7 +159,7 @@ export default function () {
       if (!Roles.userIsInRole(this.userId, 'admin')) {
         const err = 'AUTH ERROR: Invalid credentials';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('auth-error', err);
       }
 
       check(options, {
@@ -180,23 +180,26 @@ export default function () {
 
       Invitations.insert(options);
 
-      const url = Meteor.absoluteUrl() + 'invite/' + options.token;
-      const emailHtml = `email/templates/${options.role}-invitation.html`;
-      const siteTitle = Settings.get('siteTitle', 'OpenDash');
-      const adminEmail = Settings.get('adminEmail', 'invites@no-reply.com');
+      const url = Meteor.absoluteUrl(`invite/${options.token}`);
+      const emailTemplate = `email/templates/${options.role}-invitation.html`;
+      const siteTitle = Settings.get('app.title', 'OpenDash');
+      const adminEmail = Settings.get('app.adminEmail', 'invites@no-reply.com');
 
-      SSR.compileTemplate('user-invite', Assets.getText(emailHtml));
-      const content = SSR.render('user-invite', { siteTitle, url });
+      let html;
+      try {
+        html = Email.renderTemplate(emailTemplate, { siteTitle, url });
+      } catch(e) {
+        Invitations.remove(inviteId);
+        const msg = 'Error finding email template';
+        logger.error(e, msg);
+        throw new Meteor.Error('template-not-found', msg);
+      }
 
-      const emailOpts = {
+      Email.send({
         to: options.email,
         from: `${siteTitle} <${adminEmail}>`,
         subject: `You're invited to ${siteTitle}!`,
-        html: content
-      };
-
-      Meteor.defer(() => {
-        Email.send(emailOpts);
+        html
       });
 
       logger.info(`New user invited: ${options.email}`);
@@ -225,20 +228,20 @@ export default function () {
       if (!invite) {
         const err = 'Invitation not found.';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('not-found', err);
       }
 
       // invite can only be used once
       if (invite.accepted) {
         const err = 'Invitation has already been used.';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('invite-used', err);
       }
 
       if (Accounts.findUserByUsername(options.username)) {
         const msg = 'Username already exists';
         logger.warn(msg);
-        throw new Meteor.Error(msg);
+        throw new Meteor.Error('username-exists', msg);
       }
 
       const userId = Accounts.createUser({
@@ -255,9 +258,9 @@ export default function () {
         $set: {
           accepted: true,
           acceptedDate: new Date(),
-          userId: userId
+          userId
         }
-      }, (err, res) => {
+      }, (err) => {
         if (!err) {
           logger.info(`Invitation successfully accepted by ${invite.email}`);
         }
@@ -278,7 +281,7 @@ export default function () {
       if (!Roles.userIsInRole(this.userId, 'admin')) {
         const err = 'AUTH ERROR: Invalid credentials';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('auth-error', err);
       }
 
       check(inviteId, String);
@@ -287,7 +290,7 @@ export default function () {
         Invitations.remove(inviteId);
       } catch (err) {
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('delete-error', err);
       }
 
       logger.info(`Successfully removed invitation: ${inviteId}`);
@@ -307,14 +310,14 @@ export default function () {
       if (!Roles.userIsInRole(this.userId, 'admin')) {
         const err = 'AUTH ERROR: Invalid credentials';
         logger.error(err);
-        throw new Meteor.Error(err);
+        throw new Meteor.Error('auth-error', err);
       }
 
       check(userId, String);
 
       this.unblock();
 
-      Invitations.remove({ userId: userId });
+      Invitations.remove({ userId });
       Users.remove(userId);
 
       logger.info(`User ${userId} succesfully deleted.`);

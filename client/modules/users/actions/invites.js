@@ -9,23 +9,13 @@ export default {
     };
 
     if (options.email && options.role) {
-      if (options.role === 'viewer') {
-        Meteor.call('sendReactionInvite', options, (err) => {
-          if (err) {
-            Notify.error(err.error);
-          } else {
-            Notify.success('Invitation sent!');
-          }
-        });
-      } else {
-        Meteor.call('sendUserInvite', options, (err) => {
-          if (err) {
-            Notify.error(err.error);
-          } else {
-            Notify.success('Invitation sent!');
-          }
-        });
-      }
+      Meteor.call('users/sendInvite', options, (err) => {
+        if (err) {
+          Notify.error(err.reason);
+        } else {
+          Notify.success('Invitation sent!');
+        }
+      });
     } else {
       Notify.warn('Please set an email and at least one role!');
     }
@@ -56,7 +46,7 @@ export default {
 
     Meteor.call('activateUserInvite', { username, email, password, inviteToken }, (err) => {
       if (err) {
-        return LocalState.set('ACTIVATE_INVITE_ERROR', err.error);
+        return LocalState.set('ACTIVATE_INVITE_ERROR', err.reason);
       }
       Meteor.loginWithPassword(email, password, (error) => {
         if (!error) {

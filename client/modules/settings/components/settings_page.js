@@ -1,7 +1,9 @@
 import React, { Component, PropTypes } from 'react';
-import { Grid, Row, Col, Panel } from 'react-bootstrap';
+import { Grid, Row, Col, Panel, Button } from 'react-bootstrap';
 import Helmet from 'react-helmet';
+import _ from 'lodash';
 import { FieldGroup } from '/client/modules/core/components/ui';
+
 
 class SettingsPage extends Component {
 
@@ -10,17 +12,15 @@ class SettingsPage extends Component {
     update: PropTypes.func.isRequired
   }
 
-  constructor(props) {
+  constructor(props = {}) {
     super(props);
-
-    this.state =  props.settings;
-
+    this.state = props.settings;
     this.handleStateChange = this.handleStateChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   handleStateChange(e) {
-    this.setState({ [e.target.name]: e.target.value });
+    this.setState(_.set(this.state, e.target.name, e.target.value));
   }
 
   handleSubmit(e) {
@@ -29,8 +29,26 @@ class SettingsPage extends Component {
     update(this.state);
   }
 
-  render() {
+  heading(title) {
+    return (
+      <Row className='settings-group-heading'>
+        <h3>{title}</h3>
+      </Row>
+    );
+  }
 
+  field(label, setting, type = 'text') {
+    return (
+      <FieldGroup
+        label={label}
+        type={type}
+        name={setting}
+        defaultValue={_.get(this.state, setting)}
+        onChange={this.handleStateChange}/>
+    );
+  }
+
+  render() {
     return (
       <Grid className='settings-page'>
         <Helmet title='Settings' />
@@ -40,89 +58,28 @@ class SettingsPage extends Component {
               <h3 className='form-heading text-center'>Settings</h3>
               <form onSubmit={this.handleSubmit}>
 
-                <Row className='settings-group-heading'><h3>General</h3></Row>
+                {this.heading('General')}
+                {this.field('App Title', 'app.title')}
+                {this.field('Admin Email', 'app.adminEmail')}
+                {this.field('Mail URL', 'mail.smtpUrl')}
 
-                <FieldGroup
-                  label='Site Title'
-                  type='text'
-                  name='siteTitle'
-                  value={this.state.siteTitle}
-                  onChange={this.handleStateChange}/>
-                <FieldGroup
-                  label='Admin Email'
-                  type='text'
-                  name='adminEmail'
-                  value={this.state.adminEmail}
-                  onChange={this.handleStateChange}
-                  info='(used for automated emails)'/>
-                <FieldGroup
-                  label='Mail URL'
-                  type='text'
-                  name='mailUrl'
-                  value={this.state.mailUrl}
-                  onChange={this.handleStateChange}
-                  info='(SMTP URL for sending app emails)'/>
+                {this.heading('Smart Things')}
+                {this.field('Client ID', 'smartthings.clientId')}
+                {this.field('Client Secret', 'smartthings.clientSecret')}
 
-                <Row className='settings-group-heading'><h3>Smart Things</h3></Row>
+                {this.heading('Kadira')}
+                {this.field('App ID', 'kadira.appId')}
+                {this.field('Secret', 'kadira.appSecret')}
 
-                <FieldGroup
-                  label='Client ID'
-                  type='text'
-                  name='smartthingsClientId'
-                  value={this.state.smartthingsClientId}
-                  onChange={this.handleStateChange}/>
-                <FieldGroup
-                  label='Client Secret'
-                  type='text'
-                  name='smartthingsClientSecret'
-                  value={this.state.smartthingsClientSecret}
-                  onChange={this.handleStateChange}/>
+                {this.heading('Segment.io')}
+                {this.field('API Key', 'segment.writeKey')}
 
-                <Row className='settings-group-heading'><h3>Lifx</h3></Row>
-
-                <FieldGroup
-                  label='API Key'
-                  type='text'
-                  name='lifxApiKey'
-                  value={this.state.lifxApiKey}
-                  onChange={this.handleStateChange}/>
-
-                <Row className='settings-group-heading'><h3>Kadira</h3></Row>
-
-                <FieldGroup
-                  label='App ID'
-                  type='text'
-                  name='kadiraAppId'
-                  value={this.state.kadiraAppId}
-                  onChange={this.handleStateChange}/>
-                <FieldGroup
-                  label='Secret'
-                  type='text'
-                  name='kadiraAppSecret'
-                  value={this.state.kadiraAppSecret}
-                  onChange={this.handleStateChange}/>
-
-                <Row className='settings-group-heading'><h3>Segment.io</h3></Row>
-
-                <FieldGroup
-                  label='API Key'
-                  type='text'
-                  name='segmentKey'
-                  value={this.state.segmentKey}
-                  onChange={this.handleStateChange}/>
-
-                <Row className='settings-group-heading'><h3>Slack</h3></Row>
-
-                <FieldGroup
-                  label='Webhook URL'
-                  type='text'
-                  name='slackWebhookUrl'
-                  value={this.state.slackWebhookUrl}
-                  onChange={this.handleStateChange}/>
+                {this.heading('Slack')}
+                {this.field('Webhook URL', 'slack.webhookUrl')}
 
                 <Row>
                   <div className='form-group'>
-                    <button type='submit' className='btn btn-primary pull-right'>Save</button>
+                    <Button type='submit' bsStyle='primary' className='pull-right'>Save</Button>
                   </div>
                 </Row>
 
